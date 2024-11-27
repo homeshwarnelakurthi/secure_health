@@ -4,7 +4,7 @@ import base64
 
 def encrypt_data(data, key):
     """
-    Encrypt sensitive data using AES encryption.
+    Encrypt the data using AES encryption.
     """
     cipher = AES.new(key.encode('utf-8'), AES.MODE_EAX)
     nonce = cipher.nonce
@@ -13,7 +13,7 @@ def encrypt_data(data, key):
 
 def decrypt_data(nonce, ciphertext, tag, key):
     """
-    Decrypt encrypted data using AES decryption.
+    Decrypt the data using AES encryption.
     """
     cipher = AES.new(key.encode('utf-8'), AES.MODE_EAX, nonce=nonce)
     data = cipher.decrypt_and_verify(ciphertext, tag)

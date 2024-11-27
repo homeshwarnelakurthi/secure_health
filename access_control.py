@@ -1,56 +1,90 @@
 import mysql.connector
-import hashlib
 
 def query_data(user_group):
     """
     Retrieve data from the `health_info` table based on the user's group.
-    Group 'H' can access all fields, while Group 'R' cannot see first_name and last_name.
-    Query integrity checks are performed.
     """
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Homesh@99",
-        database="secure_health_db"
-    )
-    cursor = conn.cursor()
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Homesh@99",
+            database="secure_health_db"
+        )
+        cursor = conn.cursor()
+        
+        if user_group == 'H':
+            query = "SELECT id, first_name, last_name, gender, age, weight, height, health_history FROM health_info"
+        elif user_group == 'R':
+            query = "SELECT id, gender, age, weight, height, health_history FROM health_info"
+        else:
+            print("Invalid user group.")
+            return []
+        
+        cursor.execute(query)
+        data = cursor.fetchall()
+        return data
 
-    if user_group == 'H':
-        cursor.execute("SELECT id, first_name, last_name, gender, age, weight, height, health_history FROM health_info")
-    elif user_group == 'R':
-        cursor.execute("SELECT id, gender, age, weight, height, health_history FROM health_info")
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
+        return []
+    finally:
+        cursor.close()
+        conn.close()
 
-    data = cursor.fetchall()
-    data_hash = generate_hash(str(data))  # Generate hash for query integrity
-    conn.close()
-    return data, data_hash
-
-def verify_query_completeness(data, original_hash):
-    """
-    Verify if the query result is complete using the provided hash.
-    """
-    return generate_hash(str(data)) == original_hash
 
 def add_data(record_id, new_health_history):
     """
-    Update the `health_history` field of a specific record in the `health_info` table.
-    Only accessible by users from Group 'H'.
+    Update the `health_history` field of a specific record.
     """
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="Homesh@99",
-        database="secure_health_db"
-    )
-    cursor = conn.cursor()
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Homesh@99",
+            database="secure_health_db"
+        )
+        cursor = conn.cursor()
+        
+        query = "UPDATE health_info SET health_history = %s WHERE id = %s"
+        cursor.execute(query, (new_health_history, record_id))
+        conn.commit()
+        print(f"Record {record_id} updated successfully.")
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
+    finally:
+        cursor.close()
+        conn.close()
 
-    cursor.execute("""
-    UPDATE health_info
-    SET health_history = %s
-    WHERE id = %s
-    """, (new_health_history, record_id))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print(f"Record {record_id} updated successfully.")
+def update_data(user_group, record_id, updates):
+    """
+    Update specific fields in the health_info table. Only allowed for Group H.
+    """
+    if user_group != 'H':
+        print("Permission denied: Only Group H users can update data.")
+        return False
+
+    try:
+        conn = mysql.connector.connect(
+            host="localhost",
+            user="root",
+            password="Homesh@99",
+            database="secure_health_db"
+        )
+        cursor = conn.cursor()
+
+        set_clause = ", ".join([f"{column} = %s" for column in updates.keys()])
+        values = list(updates.values()) + [record_id]
+        query = f"UPDATE health_info SET {set_clause} WHERE id = %s"
+        
+        cursor.execute(query, values)
+        conn.commit()
+        print("Record updated successfully.")
+        return True
+    except mysql.connector.Error as err:
+        print(f"Database error: {err}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
